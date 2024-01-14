@@ -2,9 +2,8 @@
 """ Console Module """
 import cmd
 import sys
-import uuid
-from datetime import datetime
 from models.base_model import BaseModel
+from models.engine.file_storage import FileStorage
 from models.__init__ import storage
 from models.user import User
 from models.place import Place
@@ -15,21 +14,21 @@ from models.review import Review
 
 
 class HBNBCommand(cmd.Cmd):
-    """ Contains the fuSnctionality for the HBNB console"""
+    """ Contains the functionality for the HBNB console"""
 
     # determines prompt for interactive/non-interactive modes
     prompt = '(hbnb) ' if sys.__stdin__.isatty() else ''
 
     classes = {
-            'BaseModel': BaseModel, 'User': User, 'Place': Place,
-            'State': State, 'City': City, 'Amenity': Amenity,
-            'Review': Review
-            }
-    dot_cmds = ['all', 'count', 'show', 'destroy', 'update']
+               'BaseModel': BaseModel, 'User': User, 'Place': Place,
+               'State': State, 'City': City, 'Amenity': Amenity,
+               'Review': Review
+              }
+    dot_cmds = ['all', 'count', 'show', 'destroy', 'update', 'create']
     types = {
-            'number_rooms': int, 'number_bathrooms': int,
-            'max_guest': int, 'price_by_night': int,
-            'latitude': float, 'longitude': float
+             'number_rooms': int, 'number_bathrooms': int,
+             'max_guest': int, 'price_by_night': int,
+             'latitude': float, 'longitude': float
             }
 
     def preloop(self):
@@ -75,7 +74,7 @@ class HBNBCommand(cmd.Cmd):
                 pline = pline[2].strip()  # pline is now str
                 if pline:
                     # check for *args or **kwargs
-                    if pline[0] == '{' and pline[-1] == '}'\
+                    if pline[0] == '{' and pline[-1] == '}' \
                             and type(eval(pline)) is dict:
                         _args = pline
                     else:
@@ -115,50 +114,104 @@ class HBNBCommand(cmd.Cmd):
         """ Overrides the emptyline method of CMD """
         pass
 
-    def do_create(self, arg):
+    def do_create(self, args):
         """ Create an object of any class"""
-        args_list = arg.split(" ")
-        class_name = args_list[0]
-        params = args_list[1:]
-        if not class_name:
+        pline = args.split()
+        _cls = pline[0]
+        values = []
+        names = []
+        if not _cls:
             print("** class name missing **")
             return
-        if class_name not in HBNBCommand.classes:
+        elif _cls not in HBNBCommand.classes:
             print("** class doesn't exist **")
             return
-        
-        # Create a dictionary with attributes
-        dict_attr = {}
-        for param in params:
-            key_value_pair = param.split("=")
-            if len(key_value_pair) != 2:
+        for i in range(1, len(pline)):
+            tupl = pline[i].partition('=')
+            names.append(tupl[0])
+            try:
+                if tupl[2][0] == '\"' and tupl[2][-1] == '\"':
+                    value = tupl[2].replace('\"', '')
+                    value = value.replace('_', ' ')
+                    values.append(value)
+                else:
+                    value = tupl[2]
+                    if '.' in value or type(value) is float:
+                        try:
+                            value = float(value)
+                            values.append(value)
+                        except Exception:
+                            pass
+                    else:
+                        try:
+                            value = int(value)
+                            values.append(value)
+                        except Exception:
+                            pass
+            except IndexError:
                 continue
-            key, value = key_value_pair
-            # Process value according to syntax requirements
-            if value.startswith('"') and value.endswith('"'):
-                value = value[1:-1].replace('\\"', '"').replace('_', ' ')
-            elif '.' in value:
+
+        dictionary = dict(zip(names, values))
+
+        new_instance = HBNBCommand.classes[_cls]()
+        new_instance.__dict__.update(dictionary)
+        new_instance.save()
+        print(new_instance.id)
+
+        """ create objects with arguments
+
+        try:
+            if not args:
+                raise SyntaxError()
+            my_list = args.split(" ")
+            obj = eval("{}()".format(my_list[0]))
+
+            for i in range(1, len(my_list)):
+                item = my_list[i].split('=')
+                key = item[0]
+                val = item[1].replace('_', ' ')
+                val = val.replace("\"", "")
                 try:
-                    value = float(value)
-                except ValueError:
-                    continue
-            else:
-                try:
-                    value = int(value)
-                except ValueError:
-                    continue
+                    val = eval(val)
+                except:
+                    pass
 
+                setattr(obj, key, val)
+            obj.save()
+            print("{}".format(obj.id))
 
-            dict_attr[key] = value
+        except SyntaxError:
+            print("** class name missing **")
+        except NameError:
+            print("** class doesn't exist **") """
 
-        # Create an instance of the specified class
-        new_instance = HBNBCommand.classes[class_name](**dict_attr)
+        """Create an object of any class
+        tokenize = args.split()
+        tokens = tokenize[2].split("=")
+        name_list = []
+        values_list = []
 
-        #Set the ID and the date
-        new_instance.id = str(uuid.uuid4())
-        storage.new(new_instance)
+        if not args:
+            print("** class name missing **")
+            return
+        elif args not in HBNBCommand.classes:
+            print("** class doesn't exist **")
+            return
+
+        if tokens[1][0] == '\"' and tokens[1][-1] == '\"':
+            pass
+        else:
+            print("name must be inside double quotes")
+
+        if tokens[1][1:-2] is '\"':
+            tokens[1][1:-2].replace('\"', '\\\"')
+
+        if tokens[1][1:-2] is '_':
+            tokens[1][1:-2].replace("_", " ")
+        new_instance = HBNBCommand.classes[args]()
         storage.save()
         print(new_instance.id)
+        storage.save()"""
 
     def help_create(self):
         """ Help information for the create method """
@@ -240,11 +293,10 @@ class HBNBCommand(cmd.Cmd):
             if args not in HBNBCommand.classes:
                 print("** class doesn't exist **")
                 return
-            for k, v in storage._FileStorage__objects.items():
-                if k.split('.')[0] == args:
-                    print_list.append(str(v))
+            for k, v in storage.all(HBNBCommand.classes[args]).items():
+                print_list.append(str(v))
         else:
-            for k, v in storage._FileStorage__objects.items():
+            for k, v in storage.all:
                 print_list.append(str(v))
 
         print(print_list)
@@ -257,13 +309,13 @@ class HBNBCommand(cmd.Cmd):
     def do_count(self, args):
         """Count current number of class instances"""
         count = 0
-        for k, v in storage._FileStorage__objects.items():
+        for k, v in storage.all.items():
             if args == k.split('.')[0]:
                 count += 1
         print(count)
 
     def help_count(self):
-        """ """
+        """ Help information for the count command """
         print("Usage: count <class_name>")
 
     def do_update(self, args):
@@ -314,7 +366,7 @@ class HBNBCommand(cmd.Cmd):
             args = args.partition(' ')
 
             # if att_name was not quoted arg
-            if not att_name and args[0] == ' ':
+            if not att_name and args[0] != ' ':
                 att_name = args[0]
             # check for quoted val arg
             if args[2] and args[2][0] == '\"':
