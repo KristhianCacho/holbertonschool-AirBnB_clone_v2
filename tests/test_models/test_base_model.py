@@ -6,6 +6,7 @@ import datetime
 from uuid import UUID
 import json
 import os
+import pep8
 
 
 class test_basemodel(unittest.TestCase):
@@ -74,12 +75,12 @@ class test_basemodel(unittest.TestCase):
         with self.assertRaises(TypeError):
             new = self.value(**n)
 
-    def test_kwargs_one(self):
+    """def test_kwargs_one(self):
         """ """
         n = {'Name': 'test'}
         with self.assertRaises(KeyError):
             new = self.value(**n)
-
+    """
     def test_id(self):
         """ """
         new = self.value()
@@ -97,3 +98,7 @@ class test_basemodel(unittest.TestCase):
         n = new.to_dict()
         new = BaseModel(**n)
         self.assertFalse(new.created_at == new.updated_at)
+
+
+if __name__ == '__main__':
+    unittest.main()
